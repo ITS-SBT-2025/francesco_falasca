@@ -19,6 +19,8 @@
   "homepage": "https://github.com/ITS-SBT-2025/francesco_falasca#readme",
   "description": "",
   "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
     "nodemon": "^3.1.10"
   }
 }

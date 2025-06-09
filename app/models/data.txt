@@ -1,0 +1,5 @@
+1;Lo Hobbit;Tolkien;
+2;I Promessi Sposi;Manzoni;
+3;Uno, nessuno, centomila;Pirandello;
+4;I Malavoglia;Verga;
+5;il Signore degli Anelli;Tolkien;
