@@ -1,0 +1,26 @@
+{
+  "name": "-y",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node index.js",
+    "mon": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ITS-SBT-2025/francesco_falasca.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ITS-SBT-2025/francesco_falasca/issues"
+  },
+  "homepage": "https://github.com/ITS-SBT-2025/francesco_falasca#readme",
+  "description": "",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.10"
+  }
+}
