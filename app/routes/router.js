@@ -1,15 +1,13 @@
-const book = require('book');
+const BookController = require('../controllers/BookController');
 
-function setRoutes(app) {
-    app.get('/', function (req, res) {
-        res.send('Hello World')
-    });
-    app.get('/books/:autore', book.cercaLibri);
-    app.get('/books/:idlibro', book.getLibro);
-    app.get('/books/ciao', book.ciao);
-    app.get('/books/:idlibro', book.getLibro2);
-    app.get('/books', book.getBooks);
-    app.post('/books', book.creaLibro);
-}
+app.get('/', function (req, res) {
+    res.send('Hello World')
+});
+app.get('/books', BookController.searchBooks);
+app.post('/books', BookController.createBook);
+app.get('/books/:idlibro', test, BookController.getBook);
+app.post('/books/:idlibro', BookController.updateBook);
+app.delete('/books/:idlibro', BookController.deleteBook);
+app.get('/testsession', BookController.testsession);
 
-exports.router = setRoutes;
+module.exports = router;

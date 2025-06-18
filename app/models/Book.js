@@ -1,77 +1,171 @@
-const bookController = require('bookController');
+const fs = require('fs').promises;
+const path = require('path');
+
+const config = require('config');
+const storageType = config.get('storage');
 
 class Book {
-    static cercaLibri(req, res) {
-        let autore = req.params.autore;
-        let titolo = req.query.titolo;
-    
-        if (req.params.autore) {
-            autore = req.query.autore;
-        }
-    
-        let parametri_di_ricerca = [];
-    
-        let dbquery = "select name,author from books";
-    
-        if (autore) {
-            parametri_di_ricerca.push("author like '%" + autore + "%'");
-        }
-    
-        if (titolo) {
-            parametri_di_ricerca.push("title like '%" + titolo + "%'");
-        }
-    
-        let queryfinale = dbquery;
-    
-        if (parametri_di_ricerca.length > 0) {
-            queryfinale += " WHERE ";
-            queryfinale += parametri_di_ricerca.join(" AND ");
-        }
-    
-        res.send('Ecco la lista dei libri per la ricerca:' + queryfinale);
-    }
+    static async load() {
+        const data = { content: [], maxid: 0 };
 
-    static getLibro(req, res) {
-        if (req.params.idlibro) {
-            res.send("Nome libro trovato:" + req.params.idlibro);
+        if (storageType == 'file') {
+            let DataFile= config.get('DataFile');
+
+            try {
+                let content = await fs.readFile(path.join(__dirname, DataFile), 'utf8');
+
+                console.log(content.toString());
+                content.toString().split("\n").forEach((line) => {
+                    const [idx, title, author] = line.split(";");
+
+                    if (idx) {
+                        console.log(`idx: ${idx}, Nome: ${title}, Autore: ${author}`);
+                        data.content.push({ idx, title, author });
+
+                        if (parseInt(idx) > data.maxid) {
+                            data.maxid = parseInt(idx);
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error(err);
+            }
         } else {
-            res.status(404);
-            res.send("libro NON trovato");
+            console.error("Lettura non implementato per il tipo di storage:", storageType);
+        }
+
+        console.log("Caricamento completato:", data);
+
+        return data;
+    }
+
+    static async save(data) {
+        if (storageType == 'file') {
+            let DataFile= config.get('DataFile');
+
+            try {
+                let content = "";
+
+                data.content.forEach((item) => {
+                    content += `${item.idx};${item.title};${item.author}\n`;
+                })
+
+                await fs.writeFile(path.join(__dirname, DataFile), content, 'utf8');
+
+                console.log("Salvataggio completato:", content);
+            } catch (err) {
+                console.error(err);
+            }
+        } else {
+            console.error("Salvataggio non implementato per il tipo di storage:", storageType);
         }
     }
 
-    static ciao (req, res) {
-        res.send('Quest è Ciao');
+    static async create(a, t) {
+        try {
+            const data = await Book.load();
+
+            data.maxid++;
+
+            let theBook = { idx: data.maxid, title: t, author: a };
+
+            data.content.push(theBook);
+
+            await Book.save(data);
+
+            return theBook;
+        } catch (err) {
+            console.error(err);
+
+            return null;
+        }
     }
 
-    static getLibro2(req, res) {
-        res.send("Qui non passo mai");
-    }
-    
-    static async getBooks(req, res) {
-        let autore = req.query.autore;
-        let titolo = req.query.titolo;
-        let data = await bookController.BooksAwait(autore,titolo );
-        console.log("=======================");
-        console.log(data);
-        console.log("=======================");
-        res.json(data);
-    }
-    
-    static async creaLibro (req, res) {
-        if (!req.body.autore || !req.body.titolo) {
-            res.status(400).send("Errore: Devi specificare autore e titolo del libro");
-            return;
+    static async get(idx) {
+        let result = null;
+
+        try {
+            const data = await Book.load();
+
+            data.content.forEach((item) => {
+                if (item.idx === idx) {
+                    result = item;
+                }
+            });
+        } catch (err) {
+            console.error(err);
         }
-    
-        let a = req.body.autore;
-        let t = req.body.titolo;
-        const data = await bookController.BooksAwait();
-    
-        data.push({ title: t, author: a });
-        bookController.SaveBooks(data);
-        res.send('Ho creato il tuo libro: ' + t + " scritto da " + req.body.autore);
+
+        return result;
+    }
+
+    static async replace(idx, a, t) {
+        let result = null;
+
+        try {
+            const data = await Book.load();
+            let theBook = { idx: idx, title: t, author: a };
+
+            data.content.forEach((item) => {
+                if (item.idx === idx) {
+                    item.author = a;
+                    item.title = t;
+                    result = item;
+                }
+            });
+
+            await Book.save(data);
+        } catch (err) {
+            console.error(err);
+            result = null;
+        }
+
+        return result;
+    }
+
+    static async delete(idx) {
+        let result = { content: [], maxid: 0 };
+
+        try {
+            const data = await Book.load();
+
+            data.content.forEach((item) => {
+                console.log(`Controllo: ${item.idx} != ${idx}`);
+
+                if (item.idx != idx) {
+                    result.content.push(item);
+                }
+            });
+
+            await Book.save(result);
+        } catch (err) {
+            console.error(err);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    static async find(author = null, title = null) {
+        let result = [];
+
+        try {
+            const data = await Book.load();
+            let a = author ? author.toLowerCase() : null;
+            let t = title ? title.toLowerCase() : null;
+
+            data.content.forEach((item) => {
+                if ((!a && !t) || (a && item.author.toLowerCase().includes(a)) || (t && item.title.toLowerCase().includes(t))) {
+                    result.push(item);
+                }
+            });
+        } catch (err) {
+            console.error(err);
+        }
+        
+        return result;
     }
 }
 
-exports.book = Book;
+module.exports = Book;

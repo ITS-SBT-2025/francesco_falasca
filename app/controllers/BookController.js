@@ -1,92 +1,108 @@
-const fs = require('fs').promises;
-const path = require('path');
+const BookService = require('../main/BookService');
 
 class BookController {
-    BooksSync(a,t) {
-        const data = [];
-    
-        try {
-            let content = fs.readFileSync(path.join(__dirname, 'data/books.dat'), 'utf8');
-            console.log(content);
-            content.split("\n").forEach((line) => {
-                const [title, author] = line.split(";");
-    
-                if (title && author) {
-                    console.log(`Nome: ${title}, Autore: ${author}`);
-                    data.push({ title, author });
-                }
-            });
-        } catch (err) {
-            console.error(err);
-        }
-    
-        return data;
-    }
+    static async searchBooks(req, res) {
+        console.log("SESSION: ", req.session);
 
-    BooksAsync(a,t) {
-        const data = [];
-    
-        try {
-             fs.readFile(path.join(__dirname, 'data/books.dat'), (err, content) => {
-                if (err) {
-                    console.error(err);
-                    return;
-                }
-    
-                console.log(content);
-                // content.split("\n").forEach((line) => {
-                // const [title, author] = line.split(";");
-                // if (title && author) {
-                //     console.log(`Nome: ${title}, Autore: ${author}`);
-                //     data.push({ title, author });
-                // }
-           
-                console.log("ABBIAMO LETTO IL FILE");
-            });
-    
-            console.log("DOPO LA LETTURA");
-        } catch (err) {
-            console.error(err);
+        let autore = null;
+        let titolo = null;
+
+        if (req.query && req.query.autore) {
+            autore = req.query.autore;
         }
-    
-        return data;
-    }
-    
-    async BooksAwait(a,t) {
-        const data = [];
-    
-        try {
-            let content = await fs.readFile(path.join(__dirname, 'data/books.dat'), 'utf8');
-            console.log(content.toString());
-            content.toString().split("\n").forEach((line) => {
-                const [title, author] = line.split(";");
-    
-                if (title && author) {
-                    console.log(`Nome: ${title}, Autore: ${author}`);
-                    data.push({ title, author });
-                }
-            });
-        } catch (err) {
-            console.error(err);
+
+        if (req.query && req.query.titolo) {
+            titolo = req.query.titolo;
         }
-    
-        return data;
-    }
-    
-    async SaveBooks(data) {
-        try {
-            let content = "";
-    
-            data.forEach( (item) => {
-                content += `${item.title};${item.author}\n`;
-            });
-            
-            await fs.writeFile(path.join(__dirname, 'data/books.dat'), content, 'utf8');
-    
-        } catch (err) {
-            console.error(err);
+
+        let data = await BookService.search(autore, titolo);
+
+        if (req.headers.accept && req.headers.accept.includes('application/json')) {
+            res.json(data);
+        } else {
+            res.render('listBook', { title: 'Libri', books: data });
         }
-    }
+    };
+
+    static async createBook(req, res) {
+        if (!req.body || !req.body.autore || !req.body.titolo) {
+            res.status(400).send("Errore: Devi specificare autore e titolo del libro");
+            return;
+        }
+
+        let a = req.body.autore;
+        let t = req.body.titolo;
+
+        const data = await BookService.create(a, t);
+
+        if (!data) {
+            res.status(500).send("Errore durante la creazione del libro");
+            return;
+        }
+        res.json(data);
+    };
+
+    static async getBook(req, res) {
+        if (req.params && req.params.idlibro) {
+            const theBook = await BookService.getBookById(req.params.idlibro);
+
+            if (!theBook) {
+                res.status(404);
+                res.send("Libro non trovato");
+                return;
+            }
+
+            res.json(theBook);
+        } else {
+            res.status(400);
+            res.send("Bas Request: Devi specificare l'ID del libro");
+        }
+    };
+
+    static async updateBook(req, res) {
+        if (req.params && req.params.idlibro && req.body && req.body.author && req.body.title) {
+            const theBook = await BookService.update(req.params.idlibro, req.body.author, req.body.title);
+
+            if (!theBook) {
+                res.status(404);
+                res.send("Libro non trovato");
+                return;
+            }
+
+            res.json(theBook);
+        } else {
+            res.status(400);
+            res.send("Bas Request: Devi specificare l'ID (" + req.params.idlibro + ") del libro il nuovo titolo (" + req.body.title + ") e l'autore (" + req.body.author + ")");
+        }
+
+    };
+
+    static async deleteBook(req, res) {
+        if (req.params && req.params.idlibro) {
+            const theBook = await BookService.delete(req.params.idlibro);
+
+            if (!theBook) {
+                res.status(404);
+                res.send("Libro non trovato");
+                return;
+            }
+
+            res.send("Libro cancellato");
+        } else {
+            res.status(400);
+            res.send("Bas Request: Devi specificare l'ID del libro");
+        }
+    };
+
+    static async testsession(req, res) {
+        if (req.session && req.session.pageviews){
+            req.session.pageviews++;
+        } else {
+             req.session.pageviews=1
+        }
+
+        res.send("Test sessione eseguito con successo"+ JSON.stringify(req.session));
+    };
 }
 
-exports.bookController = BookController;
+module.exports = BookController;
